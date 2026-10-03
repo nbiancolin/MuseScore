@@ -1,0 +1,82 @@
+# Manual build from an arbitrary branch/tag and publish the Linux AppImage to GitHub Releases.
+# Intended for forks; does not publish to MuseScore FTP/Sentry/OSUOSL.
+name: 'Fork: Build and Release'
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: 'Branch, tag, or commit SHA to build'
+        required: true
+        default: main
+      release_tag:
+        description: 'GitHub release tag (created or updated on success)'
+        required: true
+      build_mode:
+        description: 'Build mode: devel, nightly, testing, stable'
+        default: 'devel'
+        required: true
+      draft:
+        description: 'Create as draft release'
+        type: boolean
+        default: true
+      prerelease:
+        description: 'Mark as pre-release'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build Linux AppImage (${{ inputs.git_ref }})
+    uses: ./.github/workflows/build_linux.yml
+    secrets: inherit
+    with:
+      platforms: 'linux_x64'
+      build_mode: ${{ inputs.build_mode }}
+      publish: 'off'
+      sentry_project: ''
+      app_ref: ${{ inputs.git_ref }}
+
+  release:
+    name: 'Release ${{ inputs.release_tag }}'
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.git_ref }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: build.artifacts
+          merge-multiple: true
+
+      - name: Collate release binaries
+        run: buildscripts/ci/release/collate_release_binaries.sh
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          name: MuseScore Linux AppImage — ${{ inputs.release_tag }} (${{ inputs.git_ref }})
+          body: |
+            Automated Linux x86_64 AppImage build from ref `${{ inputs.git_ref }}`
+            (workflow run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+            Build mode: `${{ inputs.build_mode }}`
+
+            Download the `.AppImage`, make it executable (`chmod +x`), and run it.
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
+          files: release/*
+          fail_on_unmatched_files: true
+          generate_release_notes: false
