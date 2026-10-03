@@ -38,6 +38,9 @@
 #include "editing/editsystemlocks.h"
 #include "types/typesconv.h"
 
+#include "containers.h"
+#include "log.h"
+
 // api
 #include "apistructs.h"
 #include "cursor.h"
@@ -543,6 +546,53 @@ QQmlListProperty<Part> Score::parts() const
 QQmlListProperty<Excerpt> Score::excerpts() const
 {
     return wrapExcerptsContainerProperty<Excerpt>(this, score()->masterScore()->excerpts());
+}
+
+void Score::openAllParts()
+{
+    // Mirrors PartListModel::openAllParts() / openExcerpts() from the Parts dialog.
+    mu::notation::IMasterNotationPtr masterNotation = context()->currentMasterNotation();
+    if (!masterNotation) {
+        LOGW("openAllParts: no master notation");
+        return;
+    }
+
+    if (masterNotation->masterScore() != score()->masterScore()) {
+        LOGW("openAllParts: score does not belong to the current project");
+        return;
+    }
+
+    mu::notation::ExcerptNotationList allExcerpts = masterNotation->excerpts();
+    const mu::notation::ExcerptNotationList& potentialExcerpts = masterNotation->potentialExcerpts();
+    allExcerpts.insert(allExcerpts.end(), potentialExcerpts.begin(), potentialExcerpts.end());
+    masterNotation->sortExcerpts(allExcerpts);
+
+    if (allExcerpts.empty()) {
+        return;
+    }
+
+    mu::notation::ExcerptNotationList newExcerpts = masterNotation->excerpts();
+
+    for (const mu::notation::IExcerptNotationPtr& excerpt : allExcerpts) {
+        if (excerpt->notation()->isOpen()) {
+            continue;
+        }
+
+        const size_t idx = muse::indexOf(newExcerpts, excerpt);
+        if (idx == muse::nidx) {
+            newExcerpts.push_back(excerpt);
+        } else {
+            muse::moveItem(newExcerpts, idx, newExcerpts.size());
+        }
+    }
+
+    masterNotation->setExcerpts(newExcerpts);
+
+    for (const mu::notation::IExcerptNotationPtr& excerpt : allExcerpts) {
+        masterNotation->setExcerptIsOpen(excerpt->notation(), true);
+    }
+
+    context()->setCurrentNotation(allExcerpts.back()->notation());
 }
 
 QQmlListProperty<Page> Score::pages() const

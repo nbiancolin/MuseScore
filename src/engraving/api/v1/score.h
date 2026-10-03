@@ -759,6 +759,17 @@ public:
     QQmlListProperty<apiv1::Excerpt> excerpts() const;
 
     /** APIDOC
+     * Create and open all instrument parts (excerpts), matching the Parts dialog "Open all" action.
+     * After this call, `Score.excerpts` contains the created parts, each part is opened,
+     * and the current notation switches to the last opened part (same as the UI button).
+     * Hold a reference to the master score before calling if you still need it afterwards,
+     * since `curScore` will then refer to that last part.
+     * @method
+     * @since 4.7
+     */
+    Q_INVOKABLE void openAllParts();
+
+    /** APIDOC
      * Put an item in the user's view.
      * @method
      * @param {Engraving.EngravingItem} item The item to put into view.

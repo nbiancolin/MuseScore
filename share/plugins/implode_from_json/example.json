@@ -1,0 +1,9 @@
+{
+  "groups": [
+    {
+      "staves": [0, 1, 2],
+      "removeSourceStaves": true,
+      "comment": "0-based staff indices; must be contiguous. Implode into the first staff, then remove the others."
+    }
+  ]
+}
