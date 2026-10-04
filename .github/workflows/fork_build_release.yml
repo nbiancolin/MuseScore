@@ -7,16 +7,17 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'GitHub release tag (created or updated on success)'
+        description: 'Tag name for the release (e.g. nick-4.7-appimage-1). Appears under Releases.'
         required: true
+        default: nick-4.7-appimage
       build_mode:
         description: 'Build mode: devel, nightly, testing, stable'
         default: 'devel'
         required: true
       draft:
-        description: 'Create as draft release'
+        description: 'Draft only (shows as untagged-… until you publish in the UI). Prefer false.'
         type: boolean
-        default: true
+        default: false
       prerelease:
         description: 'Mark as pre-release'
         type: boolean
@@ -65,9 +66,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.release_tag }}
+          target_commitish: ${{ github.sha }}
           name: MuseScore Linux AppImage — ${{ inputs.release_tag }} (${{ github.ref_name }})
           body: |
-            Automated Linux x86_64 AppImage build from `${{ github.ref_name }}`
+            Automated Linux x86_64 AppImage build from `${{ github.ref_name }}` @ `${{ github.sha }}`
             (workflow run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
 
             Build mode: `${{ inputs.build_mode }}`
@@ -78,3 +80,4 @@ jobs:
           files: release/*
           fail_on_unmatched_files: true
           generate_release_notes: false
+          make_latest: true
