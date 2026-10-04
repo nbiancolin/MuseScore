@@ -49,13 +49,17 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download build artifacts
+        # Keep each artifact in its own subdirectory; collate_release_binaries.sh
+        # expects build.artifacts/<name>/env/artifact_name.env (do not merge-multiple).
         uses: actions/download-artifact@v7
         with:
           path: build.artifacts
-          merge-multiple: true
 
       - name: Collate release binaries
-        run: buildscripts/ci/release/collate_release_binaries.sh
+        run: |
+          echo "Downloaded artifact layout:"
+          find build.artifacts -maxdepth 3 -type f | sort
+          buildscripts/ci/release/collate_release_binaries.sh
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
